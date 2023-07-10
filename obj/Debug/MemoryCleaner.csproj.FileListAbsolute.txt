@@ -1,0 +1,17 @@
+C:\Users\flow\Desktop\MemoryCleaner\obj\Debug\MemoryCleaner.csproj.AssemblyReference.cache
+C:\Users\flow\Desktop\MemoryCleaner\obj\Debug\MemoryCleaner.csproj.SuggestedBindingRedirects.cache
+C:\Users\flow\Desktop\MemoryCleaner\obj\Debug\MemoryCleaner.csproj.CoreCompileInputs.cache
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\MemoryCleaner.exe.config
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\MemoryCleaner.exe
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\MemoryCleaner.pdb
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\System.CodeDom.dll
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\System.Diagnostics.EventLog.dll
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\System.Security.Principal.Windows.dll
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\System.ServiceProcess.ServiceController.dll
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\System.CodeDom.xml
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\System.Diagnostics.EventLog.xml
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\System.Security.Principal.Windows.xml
+C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\System.ServiceProcess.ServiceController.xml
+C:\Users\flow\Desktop\MemoryCleaner\obj\Debug\MemoryCleaner.csproj.CopyComplete
+C:\Users\flow\Desktop\MemoryCleaner\obj\Debug\MemoryCleaner.exe
+C:\Users\flow\Desktop\MemoryCleaner\obj\Debug\MemoryCleaner.pdb
