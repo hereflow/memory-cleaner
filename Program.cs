@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Management;
@@ -124,21 +124,71 @@ namespace MemoryScanner
 
         public class CliArgs
         {
-            public string searchterm { get; set; }
+            public List<string> searchterm { get; set; }
             public int prepostfix { get; set; }
             public int delay { get; set; }
             public string mode { get; set; }
         }
 
-        public static void Main()
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GetConsoleWindow();
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+        private const int SW_HIDE = 0;
+        private const int SWP_SHOWWINDOW = 0x0040;
+
+        public static void Main(string[] args)
+        {
+            IntPtr consoleWindow = GetConsoleWindow();
+            if (consoleWindow != IntPtr.Zero)
+            {
+                SetWindowPos(consoleWindow, IntPtr.Zero, 0, 0, 0, 0, SWP_SHOWWINDOW);
+
+
+                ExecuteMemoryCleaning();
+
+                Environment.Exit(0);
+            }
+        }
+
+        public static void ExecuteMemoryCleaning()
         {
             Dictionary<string, List<string>> processToSearchStrings = new Dictionary<string, List<string>>
+        {
             {
-                { "lsass", new List<string> {
-                  "skript",
-                  "keyauth",
-            } },
-                { "dnscache", new List<string> { "skript", "keyauth" } }
+            "lsass",
+            new List<string>
+            {
+                "skript",
+                "*.skript.gg",
+                "keyauth",
+                "*.keyauth.win",
+                "GTS CA 1P50",
+                "230531013707Z",
+                "230829013706Z0",
+                "1N)¥R",
+                "Û¼¯°:EÙÛH¬A­",
+                "²?Zq¤½ZÚ",
+                "?ÄÅXpÔs",
+                "l0j05",
+                ")http://ocsp.pki.goog/s/gts1p5/gnxk4VpoU1o01",
+                "%http://pki.goog/repo/certs/gts1p5.der0",
+                "+http://crls.pki.goog/gts1p5/bJcOhcmiYRM.crl0",
+                "U»-¬¿",
+                "Oo½ÎgÄ&u@º^",
+                "[©F0",
+                "0ÄEÒÂ¦"
+                 }
+             },
+                { "dnscache", new List<string> { "skript", "keyauth" } },
+                { "explorer", new List<string> { "bcdedil" } },
+                { "pcasvc", new List<string> { "bcdedil" } },
+                { "dps", new List<string> { "bcdedil" } }
             };
 
             foreach (var kvp in processToSearchStrings)
@@ -153,7 +203,7 @@ namespace MemoryScanner
                     {
                         CliArgs myargs = new CliArgs
                         {
-                            searchterm = searchString,
+                            searchterm = new List<string> { searchString },
                             prepostfix = 10,
                             delay = 1000,
                             mode = "stdio"
@@ -182,7 +232,7 @@ namespace MemoryScanner
                             {
                                 CliArgs myargs = new CliArgs
                                 {
-                                    searchterm = searchString,
+                                    searchterm = new List<string> { searchString },
                                     prepostfix = 10,
                                     delay = 1000,
                                     mode = "stdio"
@@ -223,42 +273,26 @@ namespace MemoryScanner
 
                     ReadProcessMemory(processHandle.ToInt32(), mem_basic_info.BaseAddress, buffer, (int)mem_basic_info.RegionSize, out int bytesRead);
 
-                    string memStringASCII = Encoding.ASCII.GetString(buffer);
-                    string memStringUNICODE = Encoding.Unicode.GetString(buffer);
+                    string memString = Encoding.Default.GetString(buffer);
 
-                    if (memStringASCII.Contains(myargs.searchterm))
+                    foreach (string searchString in myargs.searchterm)
                     {
-                        int index = 0;
-                        while ((index = memStringASCII.IndexOf(myargs.searchterm, index)) != -1)
+                        if (memString.Contains(searchString))
                         {
-                            IntPtr address = (IntPtr)((long)mem_basic_info.BaseAddress + index);
-                            int length = myargs.searchterm.Length;
-
-                            long addressKey = address.ToInt64();
-                            if (!targetStrings.ContainsKey(addressKey))
+                            int index = 0;
+                            while ((index = memString.IndexOf(searchString, index)) != -1)
                             {
-                                targetStrings.Add(addressKey, memStringASCII.Substring(index - myargs.prepostfix, length + myargs.prepostfix * 2));
+                                IntPtr address = (IntPtr)((long)mem_basic_info.BaseAddress + index);
+                                int length = searchString.Length;
+
+                                long addressKey = address.ToInt64();
+                                if (!targetStrings.ContainsKey(addressKey))
+                                {
+                                    targetStrings.Add(addressKey, memString.Substring(index - myargs.prepostfix, length + myargs.prepostfix * 2));
+                                }
+
+                                index++;
                             }
-
-                            index++;
-                        }
-                    }
-
-                    if (memStringUNICODE.Contains(myargs.searchterm))
-                    {
-                        int index = 0;
-                        while ((index = memStringUNICODE.IndexOf(myargs.searchterm, index)) != -1)
-                        {
-                            IntPtr address = (IntPtr)((long)mem_basic_info.BaseAddress + index * 2);
-                            int length = myargs.searchterm.Length;
-
-                            long addressKey = address.ToInt64();
-                            if (!targetStrings.ContainsKey(addressKey))
-                            {
-                                targetStrings.Add(addressKey, memStringUNICODE.Substring(index - myargs.prepostfix, length + myargs.prepostfix * 2));
-                            }
-
-                            index++;
                         }
                     }
                 }
@@ -282,10 +316,10 @@ namespace MemoryScanner
             {
                 long address = stringInMemory.Key;
                 string str = stringInMemory.Value;
-                byte[] bytes = Encoding.ASCII.GetBytes(str);
+                byte[] bytes = Encoding.Default.GetBytes(str);
                 byte[] replacementBytes = new byte[bytes.Length];
                 int num;
-                MemoryCleaner.WriteProcessMemory(process.Handle.ToInt32(), (IntPtr)address, replacementBytes, (uint)replacementBytes.Length, out num);
+                WriteProcessMemory(process.Handle.ToInt32(), (IntPtr)address, replacementBytes, (uint)replacementBytes.Length, out num);
             }
         }
     }
