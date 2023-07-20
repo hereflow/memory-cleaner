@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Management;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using System.Text;
@@ -130,66 +132,19 @@ namespace MemoryScanner
             public string mode { get; set; }
         }
 
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr GetConsoleWindow();
-
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        [DllImport("user32.dll")]
-        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
-
-        private const int SW_HIDE = 0;
-        private const int SWP_SHOWWINDOW = 0x0040;
-
         public static void Main(string[] args)
         {
-            IntPtr consoleWindow = GetConsoleWindow();
-            if (consoleWindow != IntPtr.Zero)
-            {
-                SetWindowPos(consoleWindow, IntPtr.Zero, 0, 0, 0, 0, SWP_SHOWWINDOW);
+            ExecuteMemoryCleaning();
 
-
-                ExecuteMemoryCleaning();
-
-                Environment.Exit(0);
-            }
+            Environment.Exit(0);
         }
 
         public static void ExecuteMemoryCleaning()
         {
             Dictionary<string, List<string>> processToSearchStrings = new Dictionary<string, List<string>>
         {
-            {
-            "lsass",
-            new List<string>
-            {
-                "skript",
-                "*.skript.gg",
-                "keyauth",
-                "*.keyauth.win",
-                "GTS CA 1P50",
-                "230531013707Z",
-                "230829013706Z0",
-                "1N)¥R",
-                "Û¼¯°:EÙÛH¬A­",
-                "²?Zq¤½ZÚ",
-                "?ÄÅXpÔs",
-                "l0j05",
-                ")http://ocsp.pki.goog/s/gts1p5/gnxk4VpoU1o01",
-                "%http://pki.goog/repo/certs/gts1p5.der0",
-                "+http://crls.pki.goog/gts1p5/bJcOhcmiYRM.crl0",
-                "U»-¬¿",
-                "Oo½ÎgÄ&u@º^",
-                "[©F0",
-                "0ÄEÒÂ¦"
-                 }
-             },
-                { "dnscache", new List<string> { "skript", "keyauth" } },
-                { "explorer", new List<string> { "bcdedil" } },
-                { "pcasvc", new List<string> { "bcdedil" } },
-                { "dps", new List<string> { "bcdedil" } }
-            };
+                { "lsass", new List<string> { "skript" } },
+        };
 
             foreach (var kvp in processToSearchStrings)
             {
@@ -277,21 +232,24 @@ namespace MemoryScanner
 
                     foreach (string searchString in myargs.searchterm)
                     {
-                        if (memString.Contains(searchString))
+                        List<byte[]> encodedSearchBuffers = EncodeBuffer(searchString);
+
+                        foreach (var searchBuffer in encodedSearchBuffers)
                         {
-                            int index = 0;
-                            while ((index = memString.IndexOf(searchString, index)) != -1)
+                            int startIndex = 0;
+
+                            while ((startIndex = IndexOf(buffer, searchBuffer, startIndex)) != -1)
                             {
-                                IntPtr address = (IntPtr)((long)mem_basic_info.BaseAddress + index);
-                                int length = searchString.Length;
+                                IntPtr address = (IntPtr)((long)mem_basic_info.BaseAddress + startIndex);
+                                int length = searchBuffer.Length;
 
                                 long addressKey = address.ToInt64();
                                 if (!targetStrings.ContainsKey(addressKey))
                                 {
-                                    targetStrings.Add(addressKey, memString.Substring(index - myargs.prepostfix, length + myargs.prepostfix * 2));
+                                    targetStrings.Add(addressKey, Encoding.Default.GetString(buffer, startIndex, length));
                                 }
 
-                                index++;
+                                startIndex += searchBuffer.Length;
                             }
                         }
                     }
@@ -310,16 +268,57 @@ namespace MemoryScanner
             return targetStrings;
         }
 
+        public static int IndexOf(byte[] haystack, byte[] needle, int start = 0)
+        {
+            for (int i = start; i <= haystack.Length - needle.Length; i++)
+            {
+                bool match = true;
+                for (int j = 0; j < needle.Length; j++)
+                {
+                    if (haystack[i + j] != needle[j])
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) return i;
+            }
+            return -1;
+        }
+
+        public static List<byte[]> EncodeBuffer(string input)
+        {
+            var encodings = new List<Encoding> { Encoding.UTF8, Encoding.ASCII, Encoding.Unicode, Encoding.Default };
+            var buffers = new List<byte[]>();
+
+            foreach (var encoding in encodings)
+            {
+                buffers.Add(encoding.GetBytes(input));
+            }
+
+            return buffers;
+        }
+
         public static void ReplaceStringInProcessMemory(Process process, Dictionary<long, string> targetStrings)
         {
             foreach (KeyValuePair<long, string> stringInMemory in targetStrings)
             {
                 long address = stringInMemory.Key;
                 string str = stringInMemory.Value;
+
                 byte[] bytes = Encoding.Default.GetBytes(str);
-                byte[] replacementBytes = new byte[bytes.Length];
-                int num;
-                WriteProcessMemory(process.Handle.ToInt32(), (IntPtr)address, replacementBytes, (uint)replacementBytes.Length, out num);
+
+                byte[] currentMemoryData = new byte[bytes.Length];
+                if (ReadProcessMemory(process.Handle.ToInt32(), (IntPtr)address, currentMemoryData, currentMemoryData.Length, out int bytesRead))
+                {
+                    if (Enumerable.SequenceEqual(bytes, currentMemoryData))
+                    {
+                        byte[] replacementBytes = new byte[bytes.Length];
+
+                        WriteProcessMemory(process.Handle.ToInt32(), (IntPtr)address, replacementBytes, (uint)replacementBytes.Length, out int num);
+                    }
+                }
             }
         }
     }
