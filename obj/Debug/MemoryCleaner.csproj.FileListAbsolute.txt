@@ -15,3 +15,7 @@ C:\Users\flow\Desktop\MemoryCleaner\bin\Debug\System.ServiceProcess.ServiceContr
 C:\Users\flow\Desktop\MemoryCleaner\obj\Debug\MemoryCleaner.csproj.CopyComplete
 C:\Users\flow\Desktop\MemoryCleaner\obj\Debug\MemoryCleaner.exe
 C:\Users\flow\Desktop\MemoryCleaner\obj\Debug\MemoryCleaner.pdb
+C:\Users\wolf\Desktop\services\memory-cleaner\obj\Debug\MemoryCleaner.csproj.AssemblyReference.cache
+C:\Users\wolf\Desktop\services\memory-cleaner\obj\Debug\MemoryCleaner.csproj.CoreCompileInputs.cache
+C:\Users\wolf\Desktop\services\memory-cleaner\obj\Debug\MemoryCleaner.exe
+C:\Users\wolf\Desktop\services\memory-cleaner\obj\Debug\MemoryCleaner.pdb

