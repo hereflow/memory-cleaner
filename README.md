@@ -32,17 +32,3 @@ To use this code, follow these steps:
 5. Modify the replacement logic in the `ReplaceStringInProcessMemory` function if you want to change how the matching strings are replaced in memory.
 
 **Note:** This code is designed for educational and experimental purposes. Please ensure you have the necessary permissions and legal rights before attempting to modify process memory.
-
-## GitHub Utilities
-
-When you add this code to your GitHub repository, you can leverage various GitHub utilities to enhance collaboration and project management:
-
-- Issues: Use the Issues feature to track bugs, feature requests, and general discussions related to the project.
-- Pull Requests: Encourage contributions from others by accepting pull requests and reviewing code changes.
-- Actions: Configure GitHub Actions to automate build and test processes for your code.
-- Wiki: Create a wiki to document the usage, features, and internals of the code.
-- Projects: Use GitHub Projects to organize and track the progress of tasks and milestones.
-- Discussions: Foster community engagement and support by enabling Discussions for your repository.
-- Badges: Display informative badges, such as build status or code coverage, in your repository's README.
-
-Feel free to customize and improve this description to better suit your project and repository on GitHub.
