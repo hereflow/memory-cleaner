@@ -3,12 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Management;
-using System.Net;
-using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using System.Text;
-using System.Threading.Tasks;
 
 public class MemoryCleaner
 {
@@ -64,7 +61,7 @@ public class MemoryCleaner
         public ushort processorRevision;
     }
 
-    private static Process GetProcessByName(string processName)
+    private static Process get_process_by_name(string processName)
     {
         Process[] processes = Process.GetProcessesByName(processName);
 
@@ -95,7 +92,7 @@ public class MemoryCleaner
         return process;
     }
 
-    static ServiceController GetServiceByName(string serviceName)
+    static ServiceController get_service_by_name(string serviceName)
     {
         ServiceController[] services = ServiceController.GetServices();
 
@@ -110,7 +107,7 @@ public class MemoryCleaner
         return null;
     }
 
-    static int GetProcessIdFromService(ServiceController service)
+    static int get_service_id(ServiceController service)
     {
         using (ManagementObject serviceObj = new ManagementObject($"Win32_Service.Name='{service.ServiceName}'"))
         {
@@ -132,78 +129,61 @@ public class MemoryCleaner
         public string mode { get; set; }
     }
 
-    public static void Main()
+    public static int indexof(byte[] haystack, byte[] needle, int start = 0)
     {
-        Dictionary<string, List<string>> processToSearchStrings = new Dictionary<string, List<string>>
+        for (int i = start; i <= haystack.Length - needle.Length; i++)
         {
-            { "lsass", new List<string> { "skript.gg", "keyauth.win",} },
-            { "dnscache", new List<string> { "skript.gg", "keyauth.win" } },
-            { "explorer", new List<string> { "bcdedil.exe" } },
-            { "pcasvc", new List<string> { "bcdedil.exe" } },
-            { "dps", new List<string> { "bcdedil.exe" } } 
-        };
-
-        foreach (var kvp in processToSearchStrings)
-        {
-            string processName = kvp.Key;
-            List<string> searchStrings = kvp.Value;
-
-            Process process = GetProcessByName(processName);
-            if (process != null)
+            bool match = true;
+            for (int j = 0; j < needle.Length; j++)
             {
-                foreach (string searchString in searchStrings)
+                if (haystack[i + j] != needle[j])
                 {
-                    CliArgs myargs = new CliArgs
-                    {
-                        searchterm = new List<string> { searchString },
-                        prepostfix = 10,
-                        delay = 100,
-                        mode = "stdio"
-                    };
-
-                    var targetStrings = memScanString(process, myargs);
-
-                    if (targetStrings.Count > 0)
-                    {
-                        ReplaceStringInProcessMemory(process, targetStrings);
-                    }
+                    match = false;
+                    break;
                 }
             }
-            else
+
+            if (match) return i;
+        }
+        return -1;
+    }
+
+    public static List<byte[]> encode_buffer(string input)
+    {
+        var encodings = new List<Encoding> { Encoding.UTF8, Encoding.ASCII, Encoding.Unicode, Encoding.Default };
+        var buffers = new List<byte[]>();
+
+        foreach (var encoding in encodings)
+        {
+            buffers.Add(encoding.GetBytes(input));
+        }
+
+        return buffers;
+    }
+
+    public static void replace_strings(Process process, Dictionary<long, string> targetStrings)
+    {
+        foreach (KeyValuePair<long, string> stringInMemory in targetStrings)
+        {
+            long address = stringInMemory.Key;
+            string str = stringInMemory.Value;
+
+            byte[] bytes = Encoding.Default.GetBytes(str);
+
+            byte[] currentMemoryData = new byte[bytes.Length];
+            if (ReadProcessMemory(process.Handle.ToInt32(), (IntPtr)address, currentMemoryData, currentMemoryData.Length, out int bytesRead))
             {
-                ServiceController service = GetServiceByName(processName);
-                if (service != null)
+                if (Enumerable.SequenceEqual(bytes, currentMemoryData))
                 {
-                    int processId = GetProcessIdFromService(service);
+                    byte[] replacementBytes = new byte[bytes.Length];
 
-                    if (processId > 0)
-                    {
-                        Process associatedProcess = Process.GetProcessById(processId);
-
-                        foreach (string searchString in searchStrings)
-                        {
-                            CliArgs myargs = new CliArgs
-                            {
-                                searchterm = new List<string> { searchString },
-                                prepostfix = 10,
-                                delay = 1000,
-                                mode = "stdio"
-                            };
-
-                            var targetStrings = memScanString(associatedProcess, myargs);
-
-                            if (targetStrings.Count > 0)
-                            {
-                                ReplaceStringInProcessMemory(associatedProcess, targetStrings);
-                            }
-                        }
-                    }
+                    WriteProcessMemory(process.Handle.ToInt32(), (IntPtr)address, replacementBytes, (uint)replacementBytes.Length, out int num);
                 }
             }
         }
     }
 
-    public static Dictionary<long, string> memScanString(Process process, CliArgs myargs)
+    public static Dictionary<long, string> memory_scanner(Process process, CliArgs myargs)
     {
         IntPtr processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_WM_READ, false, process.Id);
 
@@ -229,13 +209,13 @@ public class MemoryCleaner
 
                 foreach (string searchString in myargs.searchterm)
                 {
-                    List<byte[]> encodedSearchBuffers = EncodeBuffer(searchString);
+                    List<byte[]> encodedSearchBuffers = encode_buffer(searchString);
 
                     foreach (var searchBuffer in encodedSearchBuffers)
                     {
                         int startIndex = 0;
 
-                        while ((startIndex = IndexOf(buffer, searchBuffer, startIndex)) != -1)
+                        while ((startIndex = indexof(buffer, searchBuffer, startIndex)) != -1)
                         {
                             IntPtr address = (IntPtr)((long)mem_basic_info.BaseAddress + startIndex);
                             int length = searchBuffer.Length;
@@ -265,57 +245,75 @@ public class MemoryCleaner
         return targetStrings;
     }
 
-    public static int IndexOf(byte[] haystack, byte[] needle, int start = 0)
+    public static void Main()
     {
-        for (int i = start; i <= haystack.Length - needle.Length; i++)
+        Dictionary<string, List<string>> strings_to_clean = new Dictionary<string, List<string>>
         {
-            bool match = true;
-            for (int j = 0; j < needle.Length; j++)
+            { "lsass", new List<string> { "skript.gg", "keyauth.win",} },
+            { "dnscache", new List<string> { "skript.gg", "keyauth.win" } },
+            { "explorer", new List<string> { "bcdedil.exe" } },
+            { "pcasvc", new List<string> { "bcdedil.exe" } },
+            { "dps", new List<string> { "bcdedil.exe" } } 
+        };
+
+        foreach (var kvp in strings_to_clean)
+        {
+            string processName = kvp.Key;
+            List<string> searchStrings = kvp.Value;
+
+            Process process = get_process_by_name(processName);
+            if (process != null)
             {
-                if (haystack[i + j] != needle[j])
+                foreach (string searchString in searchStrings)
                 {
-                    match = false;
-                    break;
+                    CliArgs myargs = new CliArgs
+                    {
+                        searchterm = new List<string> { searchString },
+                        prepostfix = 10,
+                        delay = 100,
+                        mode = "stdio"
+                    };
+
+                    var targetStrings = memory_scanner(process, myargs);
+
+                    if (targetStrings.Count > 0)
+                    {
+                        replace_strings(process, targetStrings);
+                    }
                 }
             }
-
-            if (match) return i;
-        }
-        return -1;
-    }
-
-    public static List<byte[]> EncodeBuffer(string input)
-    {
-        var encodings = new List<Encoding> { Encoding.UTF8, Encoding.ASCII, Encoding.Unicode, Encoding.Default };
-        var buffers = new List<byte[]>();
-
-        foreach (var encoding in encodings)
-        {
-            buffers.Add(encoding.GetBytes(input));
-        }
-
-        return buffers;
-    }
-
-    public static void ReplaceStringInProcessMemory(Process process, Dictionary<long, string> targetStrings)
-    {
-        foreach (KeyValuePair<long, string> stringInMemory in targetStrings)
-        {
-            long address = stringInMemory.Key;
-            string str = stringInMemory.Value;
-
-            byte[] bytes = Encoding.Default.GetBytes(str);
-
-            byte[] currentMemoryData = new byte[bytes.Length];
-            if (ReadProcessMemory(process.Handle.ToInt32(), (IntPtr)address, currentMemoryData, currentMemoryData.Length, out int bytesRead))
+            else
             {
-                if (Enumerable.SequenceEqual(bytes, currentMemoryData))
+                ServiceController service = get_service_by_name(processName);
+                if (service != null)
                 {
-                    byte[] replacementBytes = new byte[bytes.Length];
+                    int processId = get_service_id(service);
 
-                    WriteProcessMemory(process.Handle.ToInt32(), (IntPtr)address, replacementBytes, (uint)replacementBytes.Length, out int num);
+                    if (processId > 0)
+                    {
+                        Process associatedProcess = Process.GetProcessById(processId);
+
+                        foreach (string searchString in searchStrings)
+                        {
+                            CliArgs myargs = new CliArgs
+                            {
+                                searchterm = new List<string> { searchString },
+                                prepostfix = 10,
+                                delay = 1000,
+                                mode = "stdio"
+                            };
+
+                            var targetStrings = memory_scanner(associatedProcess, myargs);
+
+                            if (targetStrings.Count > 0)
+                            {
+                                replace_strings(associatedProcess, targetStrings);
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+
 }
