@@ -20,15 +20,3 @@ This C# code provides a memory scanner and cleaner utility that allows you to se
 7. The `Main` method iterates over a dictionary of process names and associated search strings.
    - For each process, it calls the memory scanning and replacement functions.
    - If the process is not found, it attempts to locate the corresponding Windows service and associated process ID, then performs the same operations.
-
-## Usage
-
-To use this code, follow these steps:
-
-1. Compile the code using a C# compiler or an IDE that supports C#.
-2. Run the compiled executable, which will scan and clean the memory of the specified processes or services.
-3. Customize the process names and search strings in the `processToSearchStrings` dictionary to suit your needs.
-4. Adjust the search parameters, such as the `prepostfix`, `delay`, and `mode` properties in the `CliArgs` class, to configure the scanning behavior.
-5. Modify the replacement logic in the `ReplaceStringInProcessMemory` function if you want to change how the matching strings are replaced in memory.
-
-**Note:** This code is designed for educational and experimental purposes. Please ensure you have the necessary permissions and legal rights before attempting to modify process memory.
